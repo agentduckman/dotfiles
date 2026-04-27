@@ -64,7 +64,6 @@ esac
 # =================== GUI niceties ===========================
 if [[ -n ${DISPLAY:-} ]]; then
   command -v xmodmap >/dev/null 2>&1 && xmodmap ~/.Xmodmap &>/dev/null
-  [[ -r "$HOME/.cache/wal/sequences" ]] && cat "$HOME/.cache/wal/sequences"
 fi
 
 # =================== Editing mode / editors =================

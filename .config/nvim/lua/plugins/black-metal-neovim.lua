@@ -6,7 +6,7 @@ require("black-metal").setup({
 	-- Can be one of: 'light' | 'dark', or set via vim.o.background
 	variant = "dark",
 	-- Use an alternate, lighter bg
-	alt_bg = false,
+	alt_bg = true,
 	-- If true, docstrings will be highlighted like strings, otherwise they will be
 	-- highlighted like comments. Note, behavior is dependent on the language server.
 	colored_docstrings = true,
@@ -18,7 +18,7 @@ require("black-metal").setup({
 	favor_treesitter_hl = true,
 	-- Don't set background of floating windows. Recommended for when using floating
 	-- windows with borders.
-	plain_float = false,
+	plain_float = true,
 	-- Show the end-of-buffer character
 	show_eob = true,
 	-- If true, enable the vim terminal colors
