@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+LOG_FILE="/tmp/hypr_vpn_select_errors.log"
+
 entries="
 DISCONNECT
 Afghanistan
@@ -134,26 +136,83 @@ Vietnam
 Yemen
 "
 
-# --- Minimal user feedback (Option A): desktop notifications ---
 notify() {
   command -v notify-send >/dev/null 2>&1 || return 0
-  # usage: notify "Title" "Body"
   notify-send -a "VPN" "$1" "${2:-}"
 }
 
-# --- Pick country with fuzzel ---
-choice="$(printf '%s\n' "$entries" | fuzzel --dmenu \
+log_error() {
+  local msg="$1"
+
+  # Keep the log private-ish when created by this script.
+  umask 077
+
+  {
+    printf '\n[%s] %s\n' "$(date '+%Y-%m-%d %H:%M:%S %z')" "$msg"
+  } >> "$LOG_FILE" 2>/dev/null || true
+
+  chmod 600 "$LOG_FILE" 2>/dev/null || true
+}
+
+require_cmd() {
+  local cmd="$1"
+
+  if ! command -v "$cmd" >/dev/null 2>&1; then
+    log_error "Missing required command: $cmd"
+    notify "VPN picker FAILED ❌" "Missing required command: $cmd"
+    exit 1
+  fi
+}
+
+run_logged() {
+  local desc="$1"
+  shift
+
+  local tmp rc
+  tmp="$(mktemp "${TMPDIR:-/tmp}/hypr_vpn_select.XXXXXX")"
+
+  if "$@" >"$tmp" 2>&1; then
+    rm -f "$tmp"
+    return 0
+  fi
+
+  rc=$?
+
+  {
+    printf '\n[%s] FAILED: %s\n' "$(date '+%Y-%m-%d %H:%M:%S %z')" "$desc"
+    printf 'exit_code: %s\n' "$rc"
+    printf 'command:'
+    printf ' %q' "$@"
+    printf '\n'
+    sed 's/^/output: /' "$tmp"
+  } >> "$LOG_FILE" 2>/dev/null || true
+
+  chmod 600 "$LOG_FILE" 2>/dev/null || true
+  rm -f "$tmp"
+
+  return "$rc"
+}
+
+require_cmd fuzzel
+require_cmd protonvpn
+
+# Pick country with fuzzel.
+# Esc/cancel exits cleanly and does not log as a failure.
+if ! choice="$(printf '%s\n' "$entries" | fuzzel --dmenu \
   --prompt='Country: ' \
   --width=23 \
   --lines=15 \
-)"
+)"; then
+  exit 0
+fi
 
-# User hit Esc / no selection
+# User selected blank / no selection.
 [[ -z "${choice:-}" ]] && exit 0
 
 if [[ "$choice" == "DISCONNECT" ]]; then
   notify "ProtonVPN" "Disconnecting…"
-  if protonvpn disconnect; then
+
+  if run_logged "ProtonVPN disconnect" protonvpn disconnect; then
     notify "ProtonVPN" "Disconnected ✅"
     exit 0
   else
@@ -162,36 +221,15 @@ if [[ "$choice" == "DISCONNECT" ]]; then
   fi
 fi
 
-# --- Resolve a ProtonVPN country code robustly, regardless of word count ---
-# We scan each line from `protonvpn countries` and try to match the start-of-line
-# country name to the exact selected country. When it matches, we emit the *next*
-# field, which is the country code your old script was extracting via awk $2/$3/$4.
-cc="$(
-  protonvpn countries list | awk -v target="$choice" '
-    {
-      name=""
-      for (i=1; i<=NF; i++) {
-        name = (i==1 ? $i : name " " $i)
-        if (name == target) {
-          if (i+1 <= NF) { print $(i+1); exit 0 }
-          exit 1
-        }
-      }
-    }
-  '
-)"
-
-
-if [[ -z "${cc:-}" ]]; then
-  notify "ProtonVPN" "Could not resolve country code for: $choice ❌"
-  exit 1
-fi
-
 notify "ProtonVPN" "Connecting to: $choice…"
 
-if protonvpn connect --country "$cc"; then
+# Newer Proton CLI accepts full country names directly.
+# This avoids parsing `protonvpn countries list`, which is more likely to break
+# when the CLI output format changes.
+if run_logged "ProtonVPN connect to country: $choice" protonvpn connect --country "$choice"; then
   notify "ProtonVPN" "Connected: $choice ✅"
 else
   notify "ProtonVPN" "Connection FAILED: $choice ❌"
+  notify "ProtonVPN" "Logged failure to /tmp/hypr_vpn_select_errors.log"
   exit 1
 fi

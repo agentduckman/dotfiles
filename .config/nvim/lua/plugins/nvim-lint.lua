@@ -2,7 +2,10 @@ require('lint').linters_by_ft = { --some of these need to be installed from pack
 	lua = { 'luac' },
 	python = { 'ruff' },
 	sh = { 'bash' },
+	go = { 'golangcilint' },
 	c = { 'cpplint' },
+	cpp = { 'cpplint' },
+	sql = { 'sqruff' },
 	css = { 'stylelint' },
 	html = { 'htmlhint' },
 }

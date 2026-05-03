@@ -11,6 +11,15 @@ vim.lsp.config("bashls", {
 	filetypes = { "sh", "bash" },
 })
 
+vim.lsp.config("asm-lsp", {
+	capabilities = capabilities,
+	filetypes = { "asm" },
+})
+
+vim.lsp.config("sqls", {
+	capabilities = capabilities,
+})
+
 vim.lsp.config("pyright", {
 	capabilities = capabilities,
 })
@@ -37,3 +46,4 @@ vim.lsp.enable("ts_ls")
 vim.lsp.enable("gopls")
 vim.lsp.enable("bashls")
 vim.lsp.enable("clangd")
+vim.lsp.enable("sqls")
