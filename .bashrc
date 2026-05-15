@@ -91,8 +91,8 @@ alias update='yay -Syu && yay -Scc --noconfirm && yay -Yc --noconfirm'
 alias services='systemctl list-units --type=service --state=running'
 alias newvenv='python3 -m venv .venv && . .venv/bin/activate'
 alias activate='. .venv/bin/activate'
-alias y='yazi'
 alias yori='aichat -r yori'
+alias portscan='/home/duck/Scripts/nmap_wrapper.sh'
 alias hconf='v /home/duck/.config/hypr/hyprland.conf'
 alias bconf='v /home/duck/.bashrc'
 alias kconf='v /home/duck/.config/kitty/kitty.conf'
@@ -105,6 +105,14 @@ alias gps='git push'
 alias gst='git status'
 alias gsw='git switch'
 alias kali='distrobox enter --root kali'
+function y() {
+	local tmp="$(mktemp -t "yazi-cwd.XXXXXX")" cwd
+	command yazi "$@" --cwd-file="$tmp"
+	IFS= read -r -d '' cwd < "$tmp"
+	[ "$cwd" != "$PWD" ] && [ -d "$cwd" ] && builtin cd -- "$cwd"
+	command rm -f -- "$tmp"
+}
+
 ssh() {
     ~/.local/bin/ssh-kitty "$@"
 }

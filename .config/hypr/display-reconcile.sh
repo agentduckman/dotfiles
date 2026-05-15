@@ -6,7 +6,8 @@ LOG="$HOME/.config/hypr/hypr-display.log"
 LOCKDIR="$HOME/.config/hypr/.display-reconcile.lock"
 
 EDP="eDP-1"
-EXT="DP-1"
+EXTERNAL_OUTPUTS=("DP-1" "HDMI-A-1")
+EXT=""
 EDP_SCALE="1.07"
 
 log() {
@@ -33,11 +34,12 @@ acquire_lock() {
   exit 0
 }
 
-# Return 0 if the external connector is physically connected
-dp_connected_once() {
+# Return 0 if the given external connector is physically connected
+external_connected_once() {
+  local output="$1"
   local status_file found=1
   shopt -s nullglob
-  for status_file in /sys/class/drm/card*-"${EXT}"/status; do
+  for status_file in /sys/class/drm/card*-"${output}"/status; do
     found=0
     if [[ -r "$status_file" ]] && grep -qx 'connected' "$status_file"; then
       return 0
@@ -46,7 +48,7 @@ dp_connected_once() {
   shopt -u nullglob
 
   # If no matching DRM status file exists, treat as disconnected
-  [[ $found -eq 0 ]] || log "No DRM status file found for ${EXT}; treating as disconnected"
+  [[ $found -eq 0 ]] || log "No DRM status file found for ${output}; treating as disconnected"
   return 1
 }
 
@@ -68,12 +70,20 @@ lid_closed_once() {
 }
 
 # Read twice with a small delay to reduce racey hotplug/lid transitions
-dp_connected() {
-  local a b
-  if dp_connected_once; then a=1; else a=0; fi
-  sleep 0.20
-  if dp_connected_once; then b=1; else b=0; fi
-  [[ "$a" -eq 1 && "$b" -eq 1 ]]
+select_external() {
+  local output a b
+  for output in "${EXTERNAL_OUTPUTS[@]}"; do
+    if external_connected_once "$output"; then a=1; else a=0; fi
+    sleep 0.20
+    if external_connected_once "$output"; then b=1; else b=0; fi
+    if [[ "$a" -eq 1 && "$b" -eq 1 ]]; then
+      EXT="$output"
+      return 0
+    fi
+  done
+
+  EXT="${EXTERNAL_OUTPUTS[0]}"
+  return 1
 }
 
 lid_closed() {
@@ -159,7 +169,7 @@ main() {
     log "HYPRLAND_INSTANCE_SIGNATURE is not set; Hyprland may not be running in this environment"
   fi
 
-  if dp_connected; then
+  if select_external; then
     ext_connected=1
   fi
 
