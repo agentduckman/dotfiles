@@ -23,6 +23,9 @@ map("n", "<leader>bo", ":BufferCloseAllButCurrent<CR>")
 map("n", "<leader>bL", ":BufferMoveNext<CR>")
 map("n", "<leader>bH", ":BufferMovePrevious<CR>")
 
+-- Clear search highlight
+vim.keymap.set("n", "<Esc>", "<cmd>nohlsearch<CR>", { silent = true })
+
 -- Venv select
 map('n', '<leader>v', ':VenvSelect<CR>') --ver split + open next buffer
 
@@ -115,7 +118,7 @@ map("n", "<leader>hb", function()
 end)
 
 -- misc
-map("n", "<leader>e", ":NvimTreeToggle<CR>")                          --open file explorer
+map("n", "<leader>e", ":NvimTreeToggle<CR>") --open file explorer
 map("n", "<leader>ef", ":NvimTreeFindFile<CR>")
 map("n", "<leader>er", ":NvimTreeRefresh<CR>")
 map("n", "<leader>ec", ":NvimTreeCollapse<CR>")
